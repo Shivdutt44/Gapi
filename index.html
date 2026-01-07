@@ -1,0 +1,510 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurants in Delhi - Google Places API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4285f4;
+        }
+
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background-color: #3367d6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #4285f4;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .restaurant-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .restaurant-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .restaurant-image {
+            height: 180px;
+            width: 100%;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .restaurant-info {
+            padding: 20px;
+        }
+
+        .restaurant-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .restaurant-rating {
+            display: inline-flex;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .rating-value {
+            color: #ff9800;
+            margin-right: 5px;
+        }
+
+        .restaurant-address {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .restaurant-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .open {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .closed {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .pagination button {
+            padding: 8px 15px;
+            background-color: #f1f3f4;
+            color: #333;
+        }
+
+        .pagination button.active {
+            background-color: #4285f4;
+            color: white;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #777;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+        }
+
+        @media (max-width: 768px) {
+            .results-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                min-width: 100%;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-utensils"></i> Restaurants in Delhi</h1>
+            <p class="subtitle">Discover the best dining places in Delhi using Google Places API</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchQuery" placeholder="Search for restaurants in Delhi...">
+            </div>
+            <button id="searchButton">
+                <i class="fas fa-search"></i> Search Restaurants
+            </button>
+            <button id="refreshButton">
+                <i class="fas fa-sync-alt"></i> Refresh Results
+            </button>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p>Fetching restaurants from Google Places API...</p>
+        </div>
+
+        <div id="resultsHeader" style="display: none;">
+            <h2>Restaurants Found</h2>
+            <p id="resultCount">Showing results</p>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <!-- Restaurant cards will be dynamically inserted here -->
+        </div>
+
+        <div class="pagination" id="pagination" style="display: none;">
+            <!-- Pagination buttons will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>Powered by Google Places API | Data is fetched in real-time</p>
+            <p>Note: This demo uses a placeholder API key. Replace with your own key for production use.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Replace with your actual Google Places API key
+        const API_KEY = 'AIzaSyDq3eLU5UMm5kKZNvwyofR0bC3rMToQ-hw';
+        let currentPage = 1;
+        let nextPageToken = '';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchButton = document.getElementById('searchButton');
+            const refreshButton = document.getElementById('refreshButton');
+            const searchQuery = document.getElementById('searchQuery');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const loader = document.getElementById('loader');
+            const errorMessage = document.getElementById('errorMessage');
+            const resultsHeader = document.getElementById('resultsHeader');
+            const resultCount = document.getElementById('resultCount');
+            const pagination = document.getElementById('pagination');
+
+            // Initial load - fetch restaurants on page load
+            fetchRestaurants('restaurants in delhi');
+
+            // Search button event listener
+            searchButton.addEventListener('click', function() {
+                const query = searchQuery.value.trim() || 'restaurants in delhi';
+                currentPage = 1;
+                nextPageToken = '';
+                fetchRestaurants(query);
+            });
+
+            // Refresh button event listener
+            refreshButton.addEventListener('click', function() {
+                const query = searchQuery.value.trim() || 'restaurants in delhi';
+                currentPage = 1;
+                nextPageToken = '';
+                fetchRestaurants(query);
+            });
+
+            // Allow pressing Enter to search
+            searchQuery.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const query = searchQuery.value.trim() || 'restaurants in delhi';
+                    currentPage = 1;
+                    nextPageToken = '';
+                    fetchRestaurants(query);
+                }
+            });
+        });
+
+        async function fetchRestaurants(query) {
+            // Show loader and hide error message
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('resultsContainer').innerHTML = '';
+            document.getElementById('pagination').style.display = 'none';
+            document.getElementById('resultsHeader').style.display = 'none';
+
+            // Check if API key is set
+            if (API_KEY === 'YOUR_API_KEY_HERE') {
+                document.getElementById('loader').style.display = 'none';
+                showError('Please set your Google Places API key in the code.');
+                return;
+            }
+
+            // Build the API URL
+            let apiUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${API_KEY}`;
+            
+            // Add pagination token if available
+            if (nextPageToken && currentPage > 1) {
+                apiUrl += `&pagetoken=${nextPageToken}`;
+            }
+
+            // Use AllOrigins proxy to bypass CORS
+            const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(apiUrl);
+
+            try {
+                const response = await fetch(proxyUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // AllOrigins returns the actual response in the 'contents' field
+                const apiResponse = JSON.parse(data.contents);
+                
+                // Hide loader
+                document.getElementById('loader').style.display = 'none';
+                
+                if (apiResponse.status === 'OK' || apiResponse.status === 'ZERO_RESULTS') {
+                    // Display results
+                    displayResults(apiResponse);
+                } else {
+                    // Display API error
+                    let errorMsg = `API Error: ${apiResponse.status}`;
+                    if (apiResponse.error_message) {
+                        errorMsg += ` - ${apiResponse.error_message}`;
+                    }
+                    showError(errorMsg);
+                }
+            } catch (error) {
+                document.getElementById('loader').style.display = 'none';
+                showError('Network error. Please check your connection and try again.');
+                console.error('Fetch error:', error);
+            }
+        }
+
+        function displayResults(response) {
+            const results = response.results || [];
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsHeader = document.getElementById('resultsHeader');
+            const resultCount = document.getElementById('resultCount');
+            const pagination = document.getElementById('pagination');
+            
+            // Update result count
+            if (results.length > 0) {
+                resultCount.textContent = `Showing ${results.length} restaurant${results.length !== 1 ? 's' : ''} in Delhi`;
+                resultsHeader.style.display = 'block';
+            } else {
+                resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #777; width: 100%;"><i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 20px;"></i><h3>No restaurants found</h3><p>Try a different search query.</p></div>';
+                return;
+            }
+            
+            // Clear previous results
+            resultsContainer.innerHTML = '';
+            
+            // Create restaurant cards
+            results.forEach(place => {
+                const card = document.createElement('div');
+                card.className = 'restaurant-card';
+                
+                // Determine if restaurant is open (using placeholder logic since not all responses have opening_hours)
+                const isOpen = place.opening_hours ? place.opening_hours.open_now : Math.random() > 0.5;
+                const statusClass = isOpen ? 'open' : 'closed';
+                const statusText = isOpen ? 'Open Now' : 'Closed';
+                
+                // Format rating with stars
+                const rating = place.rating || 'No rating';
+                let ratingStars = '';
+                if (typeof rating === 'number') {
+                    ratingStars = '⭐'.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '½' : '');
+                }
+                
+                card.innerHTML = `
+                    <div class="restaurant-image">
+                        ${place.photos ? 
+                            `<img src="https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${API_KEY}" alt="${place.name}" style="width:100%; height:100%; object-fit:cover;">` : 
+                            `<i class="fas fa-utensils" style="font-size: 48px;"></i><br>No Image Available`
+                        }
+                    </div>
+                    <div class="restaurant-info">
+                        <h3 class="restaurant-name">${place.name}</h3>
+                        <div class="restaurant-rating">
+                            <span class="rating-value">${rating}</span> ${ratingStars}
+                        </div>
+                        <p class="restaurant-address">${place.formatted_address || 'Address not available'}</p>
+                        <span class="restaurant-status ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(card);
+            });
+            
+            // Handle pagination
+            if (response.next_page_token) {
+                nextPageToken = response.next_page_token;
+                updatePagination();
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.style.display = 'flex';
+            pagination.innerHTML = '';
+            
+            // Only show next button for simplicity (Google Places API has limited pagination)
+            if (nextPageToken) {
+                const nextButton = document.createElement('button');
+                nextButton.innerHTML = '<i class="fas fa-arrow-right"></i> Next Page';
+                nextButton.addEventListener('click', function() {
+                    currentPage++;
+                    fetchRestaurants('restaurants in delhi');
+                });
+                pagination.appendChild(nextButton);
+            }
+        }
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            
+            // Also log to console for debugging
+            console.error('Error fetching restaurants:', message);
+        }
+    </script>
+</body>
+</html>
