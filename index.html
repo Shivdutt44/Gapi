@@ -1,510 +1,386 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurants in Delhi - Google Places API</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
-            color: white;
-            padding: 2rem 0;
-            text-align: center;
-            border-radius: 0 0 20px 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .subtitle {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .controls {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            margin-bottom: 30px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .search-box {
-            flex: 1;
-            min-width: 300px;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #4285f4;
-        }
-
-        button {
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        button:hover {
-            background-color: #3367d6;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
-        }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .loader {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top: 4px solid #4285f4;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .results-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .restaurant-card {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .restaurant-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-        }
-
-        .restaurant-image {
-            height: 180px;
-            width: 100%;
-            background-color: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #777;
-            font-size: 14px;
-        }
-
-        .restaurant-info {
-            padding: 20px;
-        }
-
-        .restaurant-name {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        .restaurant-rating {
-            display: inline-flex;
-            align-items: center;
-            background-color: #f8f9fa;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .rating-value {
-            color: #ff9800;
-            margin-right: 5px;
-        }
-
-        .restaurant-address {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-
-        .restaurant-status {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .open {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .closed {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-
-        .error-message {
-            background-color: #ffebee;
-            color: #c62828;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 30px;
-        }
-
-        .pagination button {
-            padding: 8px 15px;
-            background-color: #f1f3f4;
-            color: #333;
-        }
-
-        .pagination button.active {
-            background-color: #4285f4;
-            color: white;
-        }
-
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            color: #777;
-            font-size: 14px;
-            border-top: 1px solid #eee;
-        }
-
-        @media (max-width: 768px) {
-            .results-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .search-box {
-                min-width: 100%;
-            }
-        }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gapi - Google Places Search</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; background: #0f0f23; min-height: 100vh; color: #fff; }
+    
+    .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px 40px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .header h1 { font-size: 2em; margin-bottom: 8px; background: linear-gradient(90deg, #667eea, #764ba2, #f093fb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .header p { color: rgba(255,255,255,0.6); font-size: 0.95em; }
+    
+    .search-section { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px 40px; display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .input-group { flex: 1; min-width: 250px; max-width: 400px; }
+    .input-group label { display: block; margin-bottom: 8px; color: rgba(255,255,255,0.7); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+    .input-group input, .input-group select { width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; font-size: 16px; transition: all 0.3s; }
+    .input-group input:focus, .input-group select:focus { outline: none; border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
+    .input-group select option { background: #1a1a2e; color: #fff; }
+    
+    .btn-search { padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s; }
+    .btn-search:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); }
+    .btn-search:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    
+    .stats-bar { display: flex; gap: 40px; padding: 25px 40px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap; }
+    .stat { display: flex; align-items: center; gap: 15px; }
+    .stat-icon { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    .stat-info .label { color: rgba(255,255,255,0.5); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-info .value { color: #fff; font-size: 1.4em; font-weight: 700; }
+    
+    .results-section { padding: 40px; }
+    .section-title { font-size: 1.5em; margin-bottom: 25px; color: rgba(255,255,255,0.9); }
+    
+    .cards-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; }
+    
+    .place-card { background: linear-gradient(145deg, #1e1e3f 0%, #16162a 100%); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; opacity: 0; transform: translateY(20px); animation: fadeInUp 0.5s ease forwards; }
+    .place-card:hover { transform: translateY(-5px); border-color: rgba(102, 126, 234, 0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+    
+    .card-header { padding: 25px; position: relative; }
+    .card-header::after { content: ''; position: absolute; bottom: 0; left: 25px; right: 25px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); }
+    .card-header h3 { font-size: 1.3em; margin-bottom: 8px; color: #fff; }
+    .card-type { display: inline-block; padding: 5px 12px; background: rgba(102, 126, 234, 0.2); color: #667eea; border-radius: 20px; font-size: 12px; text-transform: capitalize; }
+    
+    .card-body { padding: 25px; }
+    .info-row { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 18px; }
+    .info-icon { width: 24px; height: 24px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .info-content { flex: 1; }
+    .info-label { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .info-value { color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.4; }
+    
+    .rating-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .rating-badge { display: flex; align-items: center; gap: 6px; background: rgba(244, 180, 0, 0.15); padding: 8px 14px; border-radius: 10px; }
+    .rating-badge .star { color: #f4b400; font-size: 18px; }
+    .rating-badge .score { font-weight: 700; font-size: 16px; }
+    .review-count { color: rgba(255,255,255,0.5); font-size: 13px; }
+    
+    .status-row { display: flex; gap: 15px; flex-wrap: wrap; }
+    .status-badge { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+    .status-badge.open { background: rgba(19, 115, 51, 0.2); color: #4caf50; }
+    .status-badge.closed { background: rgba(197, 34, 31, 0.2); color: #f44336; }
+    .price-badge { background: rgba(15, 157, 88, 0.2); color: #0f9d58; }
+    
+    .card-footer { padding: 20px 25px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); }
+    .place-id { font-size: 11px; color: rgba(255,255,255,0.3); font-family: monospace; word-break: break-all; }
+    .coordinates { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 5px; }
+    
+    .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; color: rgba(255,255,255,0.6); }
+    .spinner { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .load-more { grid-column: 1 / -1; display: flex; justify-content: center; padding: 40px; }
+    .load-more-btn { padding: 16px 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s; }
+    .load-more-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); }
+    .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    
+    .infinite-loader { grid-column: 1 / -1; display: flex; justify-content: center; padding: 20px; }
+    .infinite-loader .spinner { width: 40px; height: 40px; margin-bottom: 0; }
+    
+    .no-results { text-align: center; padding: 80px 20px; color: rgba(255,255,255,0.5); }
+    .no-results .icon { font-size: 64px; margin-bottom: 20px; opacity: 0.5; }
+    .no-results h3 { font-size: 1.5em; margin-bottom: 10px; color: rgba(255,255,255,0.7); }
+    
+    .error { background: rgba(197, 34, 31, 0.1); border: 1px solid rgba(197, 34, 31, 0.3); color: #f44336; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 40px; }
+    
+    @media (max-width: 1400px) { .cards-container { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 1100px) { .cards-container { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .cards-container { grid-template-columns: 1fr; } .search-section, .stats-bar, .results-section { padding: 20px; } .header h1 { font-size: 1.5em; } }
+  </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1><i class="fas fa-utensils"></i> Restaurants in Delhi</h1>
-            <p class="subtitle">Discover the best dining places in Delhi using Google Places API</p>
-        </div>
-    </header>
-
-    <div class="container">
-        <div class="controls">
-            <div class="search-box">
-                <input type="text" id="searchQuery" placeholder="Search for restaurants in Delhi...">
-            </div>
-            <button id="searchButton">
-                <i class="fas fa-search"></i> Search Restaurants
-            </button>
-            <button id="refreshButton">
-                <i class="fas fa-sync-alt"></i> Refresh Results
-            </button>
-        </div>
-
-        <div class="error-message" id="errorMessage"></div>
-
-        <div class="loader" id="loader">
-            <div class="spinner"></div>
-            <p>Fetching restaurants from Google Places API...</p>
-        </div>
-
-        <div id="resultsHeader" style="display: none;">
-            <h2>Restaurants Found</h2>
-            <p id="resultCount">Showing results</p>
-        </div>
-
-        <div class="results-container" id="resultsContainer">
-            <!-- Restaurant cards will be dynamically inserted here -->
-        </div>
-
-        <div class="pagination" id="pagination" style="display: none;">
-            <!-- Pagination buttons will be dynamically inserted here -->
-        </div>
+  <div class="header">
+    <h1>🔍 Gapi - Places Search</h1>
+    <p>Discover the best places around the world</p>
+  </div>
+  
+  <div class="search-section">
+    <div class="input-group">
+      <label>📍 Location</label>
+      <input type="text" id="locationInput" list="locations" placeholder="Enter city or address" value="Delhi">
+      <datalist id="locations">
+        <option value="Delhi">
+        <option value="Mumbai">
+        <option value="Bangalore">
+        <option value="Chennai">
+        <option value="Kolkata">
+        <option value="Hyderabad">
+        <option value="Pune">
+        <option value="New York">
+        <option value="Los Angeles">
+        <option value="San Francisco">
+        <option value="London">
+        <option value="Paris">
+        <option value="Tokyo">
+        <option value="Dubai">
+        <option value="Singapore">
+        <option value="Sydney">
+        <option value="Toronto">
+        <option value="Melbourne">
+        <option value="Berlin">
+        <option value="Amsterdam">
+      </datalist>
     </div>
+    
+    <div class="input-group">
+      <label>🏷️ Place Type</label>
+      <select id="typeInput">
+        <option value="restaurants">Restaurants</option>
+        <option value="cafes">Cafes</option>
+        <option value="hotels">Hotels</option>
+        <option value="hospitals">Hospitals</option>
+        <option value="banks">Banks</option>
+        <option value="gas stations">Gas Stations</option>
+        <option value="shopping malls">Shopping Malls</option>
+        <option value="parks">Parks</option>
+        <option value="gyms">Gyms</option>
+        <option value="schools">Schools</option>
+        <option value="pharmacies">Pharmacies</option>
+        <option value="bars">Bars & Pubs</option>
+        <option value="beaches">Beaches</option>
+        <option value="museums">Museums</option>
+        <option value="airports">Airports</option>
+      </select>
+    </div>
+    
+    <button class="btn-search" onclick="searchPlaces()" id="searchBtn">Search</button>
+  </div>
+  
+  <div class="stats-bar" id="stats" style="display: none;">
+    <div class="stat">
+      <div class="stat-icon">📊</div>
+      <div class="stat-info">
+        <div class="label">Results</div>
+        <div class="value" id="resultCount">0</div>
+      </div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon">📍</div>
+      <div class="stat-info">
+        <div class="label">Location</div>
+        <div class="value" id="locationDisplay">-</div>
+      </div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon">🏷️</div>
+      <div class="stat-info">
+        <div class="label">Category</div>
+        <div class="value" id="typeDisplay">-</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="results-section">
+    <h2 class="section-title" id="sectionTitle">Search Results</h2>
+    <div id="results" class="cards-container"></div>
+    <div id="loadMoreContainer" class="load-more" style="display: none;">
+      <button class="load-more-btn" onclick="loadMore()">Load More Results</button>
+    </div>
+    <div id="infiniteLoader" class="infinite-loader" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+  </div>
 
-    <footer>
-        <div class="container">
-            <p>Powered by Google Places API | Data is fetched in real-time</p>
-            <p>Note: This demo uses a placeholder API key. Replace with your own key for production use.</p>
+  <script>
+    const API_URL = 'http://localhost:5000/api/places';
+    
+    // State management
+    let allResults = [];
+    let nextPageToken = null;
+    let currentLocation = '';
+    let currentType = '';
+    let isLoading = false;
+    
+    function createCardHTML(place, index) {
+      return `
+        <div class="place-card" style="animation-delay: ${index * 0.1}s">
+          <div class="card-header">
+            <h3>${place.name}</h3>
+            <span class="card-type">${place.types ? place.types[0].replace(/_/g, ' ') : 'Place'}</span>
+          </div>
+          <div class="card-body">
+            <div class="info-row">
+              <div class="info-icon">📍</div>
+              <div class="info-content">
+                <div class="info-label">Address</div>
+                <div class="info-value">${place.formatted_address || place.vicinity || 'N/A'}</div>
+              </div>
+            </div>
+            <div class="rating-row">
+              ${place.rating ? `
+                <div class="rating-badge">
+                  <span class="star">★</span>
+                  <span class="score">${place.rating}</span>
+                </div>
+                <span class="review-count">${place.user_ratings_total} reviews</span>
+              ` : '<span class="review-count">No ratings yet</span>'}
+            </div>
+            <div class="status-row">
+              <div class="status-badge ${place.opening_hours?.open_now ? 'open' : 'closed'}">
+                ${place.opening_hours?.open_now ? '✓ Open' : '✗ Closed'}
+              </div>
+              ${place.price_level ? `
+                <div class="status-badge price-badge">
+                  💰 ${'$'.repeat(place.price_level)}
+                </div>
+              ` : ''}
+              ${place.business_status ? `
+                <div class="status-badge" style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7);">
+                  📋 ${place.business_status}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="place-id">${place.place_id}</div>
+            <div class="coordinates">Lat: ${place.geometry?.location?.lat?.toFixed(4) || 'N/A'}, Lng: ${place.geometry?.location?.lng?.toFixed(4) || 'N/A'}</div>
+          </div>
         </div>
-    </footer>
+      `;
+    }
+    
+    async function searchPlaces() {
+      const location = document.getElementById('locationInput').value.trim();
+      const type = document.getElementById('typeInput').value;
+      const query = `${type} in ${location}`;
+      const resultsDiv = document.getElementById('results');
+      const searchBtn = document.getElementById('searchBtn');
+      const statsDiv = document.getElementById('stats');
+      const sectionTitle = document.getElementById('sectionTitle');
+      const loadMoreContainer = document.getElementById('loadMoreContainer');
+      const infiniteLoader = document.getElementById('infiniteLoader');
 
-    <script>
-        // Replace with your actual Google Places API key
-        const API_KEY = 'AIzaSyDq3eLU5UMm5kKZNvwyofR0bC3rMToQ-hw';
-        let currentPage = 1;
-        let nextPageToken = '';
+      if (!location) {
+        resultsDiv.innerHTML = '<div class="error">Please enter a location</div>';
+        return;
+      }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchButton = document.getElementById('searchButton');
-            const refreshButton = document.getElementById('refreshButton');
-            const searchQuery = document.getElementById('searchQuery');
-            const resultsContainer = document.getElementById('resultsContainer');
-            const loader = document.getElementById('loader');
-            const errorMessage = document.getElementById('errorMessage');
-            const resultsHeader = document.getElementById('resultsHeader');
-            const resultCount = document.getElementById('resultCount');
-            const pagination = document.getElementById('pagination');
+      // Reset state
+      allResults = [];
+      nextPageToken = null;
+      currentLocation = location;
+      currentType = type;
+      isLoading = true;
 
-            // Initial load - fetch restaurants on page load
-            fetchRestaurants('restaurants in delhi');
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching for places...</p></div>';
+      searchBtn.disabled = true;
+      statsDiv.style.display = 'none';
+      loadMoreContainer.style.display = 'none';
+      infiniteLoader.style.display = 'none';
+      sectionTitle.textContent = `Searching in ${location}...`;
 
-            // Search button event listener
-            searchButton.addEventListener('click', function() {
-                const query = searchQuery.value.trim() || 'restaurants in delhi';
-                currentPage = 1;
-                nextPageToken = '';
-                fetchRestaurants(query);
-            });
+      try {
+        const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}`);
+        const data = await response.json();
 
-            // Refresh button event listener
-            refreshButton.addEventListener('click', function() {
-                const query = searchQuery.value.trim() || 'restaurants in delhi';
-                currentPage = 1;
-                nextPageToken = '';
-                fetchRestaurants(query);
-            });
-
-            // Allow pressing Enter to search
-            searchQuery.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    const query = searchQuery.value.trim() || 'restaurants in delhi';
-                    currentPage = 1;
-                    nextPageToken = '';
-                    fetchRestaurants(query);
-                }
-            });
-        });
-
-        async function fetchRestaurants(query) {
-            // Show loader and hide error message
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('errorMessage').style.display = 'none';
-            document.getElementById('resultsContainer').innerHTML = '';
-            document.getElementById('pagination').style.display = 'none';
-            document.getElementById('resultsHeader').style.display = 'none';
-
-            // Check if API key is set
-            if (API_KEY === 'YOUR_API_KEY_HERE') {
-                document.getElementById('loader').style.display = 'none';
-                showError('Please set your Google Places API key in the code.');
-                return;
-            }
-
-            // Build the API URL
-            let apiUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${API_KEY}`;
-            
-            // Add pagination token if available
-            if (nextPageToken && currentPage > 1) {
-                apiUrl += `&pagetoken=${nextPageToken}`;
-            }
-
-            // Use AllOrigins proxy to bypass CORS
-            const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(apiUrl);
-
-            try {
-                const response = await fetch(proxyUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // AllOrigins returns the actual response in the 'contents' field
-                const apiResponse = JSON.parse(data.contents);
-                
-                // Hide loader
-                document.getElementById('loader').style.display = 'none';
-                
-                if (apiResponse.status === 'OK' || apiResponse.status === 'ZERO_RESULTS') {
-                    // Display results
-                    displayResults(apiResponse);
-                } else {
-                    // Display API error
-                    let errorMsg = `API Error: ${apiResponse.status}`;
-                    if (apiResponse.error_message) {
-                        errorMsg += ` - ${apiResponse.error_message}`;
-                    }
-                    showError(errorMsg);
-                }
-            } catch (error) {
-                document.getElementById('loader').style.display = 'none';
-                showError('Network error. Please check your connection and try again.');
-                console.error('Fetch error:', error);
-            }
+        if (data.error) {
+          resultsDiv.innerHTML = `<div class="error">${data.error}</div>`;
+          isLoading = false;
+          return;
         }
 
-        function displayResults(response) {
-            const results = response.results || [];
-            const resultsContainer = document.getElementById('resultsContainer');
-            const resultsHeader = document.getElementById('resultsHeader');
-            const resultCount = document.getElementById('resultCount');
-            const pagination = document.getElementById('pagination');
-            
-            // Update result count
-            if (results.length > 0) {
-                resultCount.textContent = `Showing ${results.length} restaurant${results.length !== 1 ? 's' : ''} in Delhi`;
-                resultsHeader.style.display = 'block';
-            } else {
-                resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #777; width: 100%;"><i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 20px;"></i><h3>No restaurants found</h3><p>Try a different search query.</p></div>';
-                return;
-            }
-            
-            // Clear previous results
-            resultsContainer.innerHTML = '';
-            
-            // Create restaurant cards
-            results.forEach(place => {
-                const card = document.createElement('div');
-                card.className = 'restaurant-card';
-                
-                // Determine if restaurant is open (using placeholder logic since not all responses have opening_hours)
-                const isOpen = place.opening_hours ? place.opening_hours.open_now : Math.random() > 0.5;
-                const statusClass = isOpen ? 'open' : 'closed';
-                const statusText = isOpen ? 'Open Now' : 'Closed';
-                
-                // Format rating with stars
-                const rating = place.rating || 'No rating';
-                let ratingStars = '';
-                if (typeof rating === 'number') {
-                    ratingStars = '⭐'.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '½' : '');
-                }
-                
-                card.innerHTML = `
-                    <div class="restaurant-image">
-                        ${place.photos ? 
-                            `<img src="https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${API_KEY}" alt="${place.name}" style="width:100%; height:100%; object-fit:cover;">` : 
-                            `<i class="fas fa-utensils" style="font-size: 48px;"></i><br>No Image Available`
-                        }
-                    </div>
-                    <div class="restaurant-info">
-                        <h3 class="restaurant-name">${place.name}</h3>
-                        <div class="restaurant-rating">
-                            <span class="rating-value">${rating}</span> ${ratingStars}
-                        </div>
-                        <p class="restaurant-address">${place.formatted_address || 'Address not available'}</p>
-                        <span class="restaurant-status ${statusClass}">${statusText}</span>
-                    </div>
-                `;
-                
-                resultsContainer.appendChild(card);
-            });
-            
-            // Handle pagination
-            if (response.next_page_token) {
-                nextPageToken = response.next_page_token;
-                updatePagination();
-            } else {
-                pagination.style.display = 'none';
-            }
+        if (!data.results || data.results.length === 0) {
+          resultsDiv.innerHTML = `
+            <div class="no-results" style="min-width: unset;">
+              <div class="icon">🔍</div>
+              <h3>No places found</h3>
+              <p>Try a different location or category</p>
+            </div>`;
+          sectionTitle.textContent = 'No Results';
+          isLoading = false;
+          return;
         }
 
-        function updatePagination() {
-            const pagination = document.getElementById('pagination');
-            pagination.style.display = 'flex';
-            pagination.innerHTML = '';
-            
-            // Only show next button for simplicity (Google Places API has limited pagination)
-            if (nextPageToken) {
-                const nextButton = document.createElement('button');
-                nextButton.innerHTML = '<i class="fas fa-arrow-right"></i> Next Page';
-                nextButton.addEventListener('click', function() {
-                    currentPage++;
-                    fetchRestaurants('restaurants in delhi');
-                });
-                pagination.appendChild(nextButton);
-            }
+        // Store results and pagination token
+        allResults = data.results;
+        nextPageToken = data.next_page_token || null;
+
+        // Update stats and title
+        document.getElementById('resultCount').textContent = allResults.length;
+        document.getElementById('locationDisplay').textContent = location;
+        document.getElementById('typeDisplay').textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        statsDiv.style.display = 'flex';
+        sectionTitle.textContent = `Top ${allResults.length} ${type.charAt(0).toUpperCase() + type.slice(1)} in ${location}`;
+
+        // Render cards
+        resultsDiv.innerHTML = allResults.map((place, index) => createCardHTML(place, index)).join('');
+
+        // Show load more button if there's a next page
+        if (nextPageToken) {
+          loadMoreContainer.style.display = 'flex';
         }
 
-        function showError(message) {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            
-            // Also log to console for debugging
-            console.error('Error fetching restaurants:', message);
+        isLoading = false;
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="error">Failed to connect to API: ${error.message}</div>`;
+        isLoading = false;
+      } finally {
+        searchBtn.disabled = false;
+      }
+    }
+    
+    async function loadMore() {
+      if (isLoading || !nextPageToken) return;
+      
+      const loadMoreContainer = document.getElementById('loadMoreContainer');
+      const infiniteLoader = document.getElementById('infiniteLoader');
+      const resultsDiv = document.getElementById('results');
+      const searchBtn = document.getElementById('searchBtn');
+      
+      isLoading = true;
+      loadMoreContainer.style.display = 'none';
+      infiniteLoader.style.display = 'flex';
+      searchBtn.disabled = true;
+
+      try {
+        // Add pagetoken parameter to the existing query
+        const location = currentLocation;
+        const type = currentType;
+        const query = `${type} in ${location}`;
+        
+        const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}&pagetoken=${encodeURIComponent(nextPageToken)}`);
+        const data = await response.json();
+
+        if (data.results && data.results.length > 0) {
+          // Add new results to existing array
+          allResults = [...allResults, ...data.results];
+          nextPageToken = data.next_page_token || null;
+
+          // Append new cards
+          const newCardsHTML = data.results.map((place, index) => createCardHTML(place, allResults.length - data.results.length + index)).join('');
+          resultsDiv.insertAdjacentHTML('beforeend', newCardsHTML);
+
+          // Update result count
+          document.getElementById('resultCount').textContent = allResults.length;
+          sectionTitle.textContent = `Top ${allResults.length} ${type.charAt(0).toUpperCase() + type.slice(1)} in ${location}`;
         }
-    </script>
+
+        // Show/hide load more button
+        if (nextPageToken) {
+          loadMoreContainer.style.display = 'flex';
+        }
+      } catch (error) {
+        console.error('Error loading more results:', error);
+        loadMoreContainer.style.display = 'flex';
+      } finally {
+        isLoading = false;
+        infiniteLoader.style.display = 'none';
+        searchBtn.disabled = false;
+      }
+    }
+
+    // Allow Enter key to search
+    document.getElementById('locationInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchPlaces();
+    });
+
+    // Auto-search on type change
+    document.getElementById('typeInput').addEventListener('change', () => {
+      if (document.getElementById('locationInput').value.trim()) {
+        searchPlaces();
+      }
+    });
+  </script>
 </body>
 </html>
