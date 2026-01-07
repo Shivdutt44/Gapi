@@ -79,6 +79,9 @@
     .place-card:hover { transform: translateY(-5px); border-color: rgba(102, 126, 234, 0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
     @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
     
+    .card-image { width: 100%; height: 180px; object-fit: cover; background: rgba(255,255,255,0.05); }
+    .card-image-placeholder { width: 100%; height: 180px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%); font-size: 48px; }
+    
     .card-header { padding: 25px; position: relative; }
     .card-header::after { content: ''; position: absolute; bottom: 0; left: 25px; right: 25px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); }
     .card-header h3 { font-size: 1.3em; margin-bottom: 8px; color: #fff; }
@@ -335,8 +338,19 @@
     }
     
     function createCardHTML(place, index) {
+      const photoUrl = place.photos && place.photos[0] 
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=AIzaSyDq3eLU5UMm5kKZNvwyofR0bC3rMToQ-hw`
+        : null;
+      const typeEmoji = getTypeEmoji(place.types?.[0] || '');
+      
       return `
         <div class="place-card" style="animation-delay: ${index * 0.1}s">
+          ${photoUrl ? 
+            `<img class="card-image" src="${photoUrl}" alt="${place.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
+            `<div class="card-image-placeholder" style="display:none;">${typeEmoji}</div>`
+            : 
+            `<div class="card-image-placeholder">${typeEmoji}</div>`
+          }
           <div class="card-header">
             <h3>${place.name}</h3>
             <span class="card-type">${place.types ? place.types[0].replace(/_/g, ' ') : 'Place'}</span>
@@ -380,6 +394,29 @@
           </div>
         </div>
       `;
+    }
+    
+    // Helper function to get emoji based on place type
+    function getTypeEmoji(type) {
+      const emojis = {
+        'restaurant': '🍽️',
+        'cafe': '☕',
+        'bar': '🍸',
+        'hotel': '🏨',
+        'hospital': '🏥',
+        'bank': '🏦',
+        'gas_station': '⛽',
+        'shopping_mall': '🛍️',
+        'park': '🌳',
+        'gym': '💪',
+        'school': '🏫',
+        'pharmacy': '💊',
+        'beach': '🏖️',
+        'museum': '🏛️',
+        'airport': '✈️',
+        'default': '📍'
+      };
+      return emojis[type] || emojis[type.replace(/\s+/g, '_')] || emojis.default;
     }
     
     // Setup Intersection Observer for infinite scroll - triggers on little scroll
