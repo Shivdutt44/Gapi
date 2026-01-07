@@ -70,19 +70,16 @@
     .spinner { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     
-    .load-more { grid-column: 1 / -1; display: flex; justify-content: center; padding: 40px; }
-    .load-more-btn { padding: 16px 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s; }
-    .load-more-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); }
-    .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .infinite-loader { grid-column: 1 / -1; display: flex; justify-content: center; padding: 40px; }
+    .infinite-loader .spinner { width: 50px; height: 50px; margin-bottom: 0; }
     
-    .infinite-loader { grid-column: 1 / -1; display: flex; justify-content: center; padding: 20px; }
-    .infinite-loader .spinner { width: 40px; height: 40px; margin-bottom: 0; }
-    
-    .no-results { text-align: center; padding: 80px 20px; color: rgba(255,255,255,0.5); }
+    .no-results { text-align: center; padding: 80px 20px; color: rgba(255,255,255,0.5); grid-column: 1 / -1; }
     .no-results .icon { font-size: 64px; margin-bottom: 20px; opacity: 0.5; }
     .no-results h3 { font-size: 1.5em; margin-bottom: 10px; color: rgba(255,255,255,0.7); }
     
     .error { background: rgba(197, 34, 31, 0.1); border: 1px solid rgba(197, 34, 31, 0.3); color: #f44336; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 40px; }
+    
+    .sentinel { grid-column: 1 / -1; height: 20px; }
     
     @media (max-width: 1400px) { .cards-container { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 1100px) { .cards-container { grid-template-columns: repeat(2, 1fr); } }
@@ -174,12 +171,11 @@
   <div class="results-section">
     <h2 class="section-title" id="sectionTitle">Search Results</h2>
     <div id="results" class="cards-container"></div>
-    <div id="loadMoreContainer" class="load-more" style="display: none;">
-      <button class="load-more-btn" onclick="loadMore()">Load More Results</button>
-    </div>
     <div id="infiniteLoader" class="infinite-loader" style="display: none;">
       <div class="spinner"></div>
+      <p style="margin-top: 10px; color: rgba(255,255,255,0.6);">Loading more results...</p>
     </div>
+    <div id="sentinel" class="sentinel"></div>
   </div>
 
   <script>
@@ -191,6 +187,7 @@
     let currentLocation = '';
     let currentType = '';
     let isLoading = false;
+    let observer = null;
     
     function createCardHTML(place, index) {
       return `
@@ -240,6 +237,27 @@
       `;
     }
     
+    // Setup Intersection Observer for infinite scroll
+    function setupObserver() {
+      if (observer) {
+        observer.disconnect();
+      }
+      
+      const sentinel = document.getElementById('sentinel');
+      
+      observer = new IntersectionObserver((entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && nextPageToken && !isLoading) {
+          loadMore();
+        }
+      }, {
+        rootMargin: '200px', // Load more when 200px from bottom
+        threshold: 0
+      });
+      
+      observer.observe(sentinel);
+    }
+    
     async function searchPlaces() {
       const location = document.getElementById('locationInput').value.trim();
       const type = document.getElementById('typeInput').value;
@@ -248,7 +266,6 @@
       const searchBtn = document.getElementById('searchBtn');
       const statsDiv = document.getElementById('stats');
       const sectionTitle = document.getElementById('sectionTitle');
-      const loadMoreContainer = document.getElementById('loadMoreContainer');
       const infiniteLoader = document.getElementById('infiniteLoader');
 
       if (!location) {
@@ -266,7 +283,6 @@
       resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching for places...</p></div>';
       searchBtn.disabled = true;
       statsDiv.style.display = 'none';
-      loadMoreContainer.style.display = 'none';
       infiniteLoader.style.display = 'none';
       sectionTitle.textContent = `Searching in ${location}...`;
 
@@ -282,7 +298,7 @@
 
         if (!data.results || data.results.length === 0) {
           resultsDiv.innerHTML = `
-            <div class="no-results" style="min-width: unset;">
+            <div class="no-results">
               <div class="icon">🔍</div>
               <h3>No places found</h3>
               <p>Try a different location or category</p>
@@ -306,9 +322,12 @@
         // Render cards
         resultsDiv.innerHTML = allResults.map((place, index) => createCardHTML(place, index)).join('');
 
-        // Show load more button if there's a next page
+        // Setup infinite scroll observer
+        setupObserver();
+
+        // Show loader if more results available
         if (nextPageToken) {
-          loadMoreContainer.style.display = 'flex';
+          infiniteLoader.style.display = 'flex';
         }
 
         isLoading = false;
@@ -323,18 +342,15 @@
     async function loadMore() {
       if (isLoading || !nextPageToken) return;
       
-      const loadMoreContainer = document.getElementById('loadMoreContainer');
       const infiniteLoader = document.getElementById('infiniteLoader');
       const resultsDiv = document.getElementById('results');
       const searchBtn = document.getElementById('searchBtn');
       
       isLoading = true;
-      loadMoreContainer.style.display = 'none';
       infiniteLoader.style.display = 'flex';
       searchBtn.disabled = true;
 
       try {
-        // Add pagetoken parameter to the existing query
         const location = currentLocation;
         const type = currentType;
         const query = `${type} in ${location}`;
@@ -356,16 +372,17 @@
           sectionTitle.textContent = `Top ${allResults.length} ${type.charAt(0).toUpperCase() + type.slice(1)} in ${location}`;
         }
 
-        // Show/hide load more button
+        // Keep loader visible if more results
         if (nextPageToken) {
-          loadMoreContainer.style.display = 'flex';
+          infiniteLoader.style.display = 'flex';
+        } else {
+          infiniteLoader.style.display = 'none';
         }
       } catch (error) {
         console.error('Error loading more results:', error);
-        loadMoreContainer.style.display = 'flex';
+        infiniteLoader.style.display = 'flex';
       } finally {
         isLoading = false;
-        infiniteLoader.style.display = 'none';
         searchBtn.disabled = false;
       }
     }
