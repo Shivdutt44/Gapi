@@ -30,7 +30,7 @@ app.get('/api/health', (req, res) => {
 // Google Places API endpoint
 app.get('/api/places', async (req, res) => {
   try {
-    const { query, key, pagetoken, type } = req.query;
+    const { query, key, pagetoken, type, radius, page } = req.query;
     const apiKey = key || GOOGLE_API_KEY;
     
     if (!apiKey || apiKey === 'YOUR_API_KEY') {
@@ -46,12 +46,17 @@ app.get('/api/places', async (req, res) => {
       'schools', 'pharmacies', 'bars', 'beaches', 'museums', 'airports'
     ];
     
+    // Progressive search parameters
+    const searchRadius = parseInt(radius) || 50000; // Default 50km
+    const searchPage = parseInt(page) || 0;
+    const maxRadius = 500000; // Max 500km for progressive search
+    
     let googleUrl;
-    if (pagetoken) {
-      // Use pagetoken for next page of results
-      googleUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${encodeURIComponent(pagetoken)}&key=${apiKey}`;
-    } else if (type === 'all') {
-      // First, geocode the location to get coordinates
+    
+    // Check if this is a progressive search (has page parameter)
+    if (searchPage > 0) {
+      // Progressive search - calculate new center based on page number
+      // Create a grid pattern around the original location
       const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
       const geocodeResponse = await fetch(geocodeUrl);
       const geocodeData = await geocodeResponse.json();
@@ -60,11 +65,47 @@ app.get('/api/places', async (req, res) => {
         return res.status(400).json({ error: 'Could not find location' });
       }
       
-      const location = geocodeData.results[0].geometry.location;
+      const baseLocation = geocodeData.results[0].geometry.location;
       
-      // Search for all place types using nearby search and combine results
+      // Calculate offset for grid pattern (roughly 50km apart)
+      const latOffset = 0.45; // ~50km at equator
+      const lngOffset = 0.45 / Math.cos(baseLocation.lat * Math.PI / 180);
+      
+      // Calculate new center based on page number (spiral/grid pattern)
+      const pageIndex = searchPage - 1;
+      const ring = Math.floor(Math.sqrt(pageIndex));
+      const position = pageIndex - ring * ring;
+      
+      // Distribute positions in a grid pattern
+      let offsetLat = 0;
+      let offsetLng = 0;
+      
+      if (ring > 0) {
+        const positions = 8 * ring;
+        if (position < positions) {
+          const quadrant = Math.floor(position / ring);
+          const step = position % ring;
+          const distance = (step + 1) * latOffset;
+          
+          switch(quadrant % 8) {
+            case 0: offsetLat = distance; break;
+            case 1: offsetLat = distance; offsetLng = ring * lngOffset; break;
+            case 2: offsetLng = ring * lngOffset; break;
+            case 3: offsetLat = -distance; offsetLng = ring * lngOffset; break;
+            case 4: offsetLat = -distance; break;
+            case 5: offsetLat = -distance; offsetLng = -ring * lngOffset; break;
+            case 6: offsetLng = -ring * lngOffset; break;
+            case 7: offsetLat = distance; offsetLng = -ring * lngOffset; break;
+          }
+        }
+      }
+      
+      const newLat = baseLocation.lat + offsetLat;
+      const newLng = baseLocation.lng + offsetLng;
+      
+      // Search for all place types in the new area
       const promises = allTypes.map(t => 
-        fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=50000&type=${t}&key=${apiKey}`)
+        fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${newLat},${newLng}&radius=${searchRadius}&type=${t}&key=${apiKey}`)
           .then(res => res.json())
           .catch(() => ({ results: [] }))
       );
@@ -89,7 +130,154 @@ app.get('/api/places', async (req, res) => {
       // Shuffle results for variety
       const shuffledResults = combinedResults.sort(() => Math.random() - 0.5);
       
-      return res.json({ results: shuffledResults });
+      // Determine if we should continue searching
+      const nextRadius = searchRadius < maxRadius ? Math.min(searchRadius * 2, maxRadius) : searchRadius;
+      const hasMore = shuffledResults.length > 0 && searchRadius < maxRadius;
+      
+      return res.json({ 
+        results: shuffledResults,
+        next_page_token: hasMore ? `page_${searchPage + 1}_radius_${nextRadius}` : null,
+        search_info: {
+          page: searchPage,
+          radius: searchRadius,
+          location: { lat: newLat, lng: newLng }
+        }
+      });
+    } else if (pagetoken && pagetoken.startsWith('page_')) {
+      // Parse the custom token for progressive search
+      const tokenMatch = pagetoken.match(/page_(\d+)_radius_(\d+)/);
+      if (tokenMatch) {
+        const nextPage = parseInt(tokenMatch[1]);
+        const nextRadius = parseInt(tokenMatch[2]);
+        
+        // Recursive call with page and radius parameters - directly make the call
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
+        const geocodeResponse = await fetch(geocodeUrl);
+        const geocodeData = await geocodeResponse.json();
+        
+        if (!geocodeData.results || geocodeData.results.length === 0) {
+          return res.status(400).json({ error: 'Could not find location' });
+        }
+        
+        const baseLocation = geocodeData.results[0].geometry.location;
+        
+        // Calculate offset for grid pattern
+        const latOffset = 0.45;
+        const lngOffset = 0.45 / Math.cos(baseLocation.lat * Math.PI / 180);
+        
+        const pageIndex = nextPage - 1;
+        const ring = Math.floor(Math.sqrt(pageIndex));
+        const position = pageIndex - ring * ring;
+        
+        let offsetLat = 0;
+        let offsetLng = 0;
+        
+        if (ring > 0) {
+          const positions = 8 * ring;
+          if (position < positions) {
+            const quadrant = Math.floor(position / ring);
+            const step = position % ring;
+            const distance = (step + 1) * latOffset;
+            
+            switch(quadrant % 8) {
+              case 0: offsetLat = distance; break;
+              case 1: offsetLat = distance; offsetLng = ring * lngOffset; break;
+              case 2: offsetLng = ring * lngOffset; break;
+              case 3: offsetLat = -distance; offsetLng = ring * lngOffset; break;
+              case 4: offsetLat = -distance; break;
+              case 5: offsetLat = -distance; offsetLng = -ring * lngOffset; break;
+              case 6: offsetLng = -ring * lngOffset; break;
+              case 7: offsetLat = distance; offsetLng = -ring * lngOffset; break;
+            }
+          }
+        }
+        
+        const newLat = baseLocation.lat + offsetLat;
+        const newLng = baseLocation.lng + offsetLng;
+        
+        const promises = allTypes.map(t => 
+          fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${newLat},${newLng}&radius=${nextRadius}&type=${t}&key=${apiKey}`)
+            .then(res => res.json())
+            .catch(() => ({ results: [] }))
+        );
+        
+        const allResults = await Promise.all(promises);
+        
+        const combinedResults = [];
+        const seenIds = new Set();
+        
+        for (const result of allResults) {
+          if (result.results) {
+            for (const place of result.results) {
+              if (!seenIds.has(place.place_id)) {
+                seenIds.add(place.place_id);
+                combinedResults.push(place);
+              }
+            }
+          }
+        }
+        
+        const shuffledResults = combinedResults.sort(() => Math.random() - 0.5);
+        
+        const maxRadius = 500000;
+        const hasMore = shuffledResults.length > 0 && nextRadius < maxRadius;
+        
+        return res.json({ 
+          results: shuffledResults,
+          next_page_token: hasMore ? `page_${nextPage + 1}_radius_${nextRadius}` : null,
+          search_info: {
+            page: nextPage,
+            radius: nextRadius,
+            location: { lat: newLat, lng: newLng }
+          }
+        });
+      }
+    } else if (pagetoken) {
+      // Use pagetoken for next page of results (standard Google pagination)
+      googleUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${encodeURIComponent(pagetoken)}&key=${apiKey}`;
+    } else if (type === 'all') {
+      // First, geocode the location to get coordinates
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
+      const geocodeResponse = await fetch(geocodeUrl);
+      const geocodeData = await geocodeResponse.json();
+      
+      if (!geocodeData.results || geocodeData.results.length === 0) {
+        return res.status(400).json({ error: 'Could not find location' });
+      }
+      
+      const location = geocodeData.results[0].geometry.location;
+      
+      // Search for all place types using nearby search and combine results
+      const promises = allTypes.map(t => 
+        fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=${searchRadius}&type=${t}&key=${apiKey}`)
+          .then(res => res.json())
+          .catch(() => ({ results: [] }))
+      );
+      
+      const allResults = await Promise.all(promises);
+      
+      // Combine and deduplicate results by place_id
+      const combinedResults = [];
+      const seenIds = new Set();
+      
+      for (const result of allResults) {
+        if (result.results) {
+          for (const place of result.results) {
+            if (!seenIds.has(place.place_id)) {
+              seenIds.add(place.place_id);
+              combinedResults.push(place);
+            }
+          }
+        }
+      }
+      
+      // Shuffle results for variety
+      const shuffledResults = combinedResults.sort(() => Math.random() - 0.5);
+      
+      return res.json({ 
+        results: shuffledResults,
+        next_page_token: `page_1_radius_${searchRadius}`
+      });
     } else {
       googleUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
     }
