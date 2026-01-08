@@ -544,6 +544,14 @@
   <div class="header">
     <h1>🔍 Gapi - Places Search</h1>
     <p>Discover the best places around the world</p>
+    <button class="eye-btn" onclick="showDeviceInfo()" style="margin-top: 15px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+        <line x1="8" y1="21" x2="16" y2="21"></line>
+        <line x1="12" y1="17" x2="12" y2="21"></line>
+      </svg>
+      Device Info
+    </button>
   </div>
   
   <div class="search-section">
@@ -703,6 +711,62 @@
         <div class="reviews-section">
           <h3 class="reviews-title">Recent Reviews</h3>
           <div id="place-reviews"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Info Modal -->
+  <div id="deviceModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <button class="close-btn" onclick="closeDeviceModal()">&times;</button>
+        <h2 class="modal-title">Device Information</h2>
+      </div>
+      <div class="modal-body">
+        <div class="details-section" style="grid-template-columns: 1fr;">
+          <div class="detail-item">
+            <div class="detail-icon">📐</div>
+            <div class="detail-content">
+              <div class="detail-label">Screen Width</div>
+              <div id="device-width" class="detail-value">Loading...</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-icon">📏</div>
+            <div class="detail-content">
+              <div class="detail-label">Screen Height</div>
+              <div id="device-height" class="detail-value">Loading...</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-icon">🖥️</div>
+            <div class="detail-content">
+              <div class="detail-label">Available Width</div>
+              <div id="avail-width" class="detail-value">Loading...</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-icon">📐</div>
+            <div class="detail-content">
+              <div class="detail-label">Available Height</div>
+              <div id="avail-height" class="detail-value">Loading...</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-icon">🔢</div>
+            <div class="detail-content">
+              <div class="detail-label">Color Depth</div>
+              <div id="color-depth" class="detail-value">Loading...</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-icon">📱</div>
+            <div class="detail-content">
+              <div class="detail-label">Pixel Ratio</div>
+              <div id="pixel-ratio" class="detail-value">Loading...</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1199,10 +1263,15 @@
       // Reviews
       const reviewsDiv = document.getElementById('place-reviews');
       if (place.reviews && place.reviews.length > 0) {
-        reviewsDiv.innerHTML = place.reviews.slice(0, 3).map(review => `
+        reviewsDiv.innerHTML = place.reviews.map(review => `
           <div class="review-item">
-            <div class="review-author">${review.author_name}</div>
-            <div class="review-rating">${'★'.repeat(Math.round(review.rating))}</div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+              ${review.profile_photo_url ? `<img src="${review.profile_photo_url}" alt="${review.author_name}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : ''}
+              <div>
+                <div class="review-author">${review.author_name}</div>
+                <div class="review-rating">${'★'.repeat(Math.round(review.rating))}</div>
+              </div>
+            </div>
             <div class="review-text">${review.text}</div>
           </div>
         `).join('');
@@ -1246,6 +1315,40 @@
     document.getElementById('modal').addEventListener('click', (e) => {
       if (e.target === document.getElementById('modal')) {
         closeModal();
+      }
+    });
+
+    // Device Info Modal Functions
+    function showDeviceInfo() {
+      // Update device info
+      document.getElementById('device-width').textContent = `${window.screen.width}px`;
+      document.getElementById('device-height').textContent = `${window.screen.height}px`;
+      document.getElementById('avail-width').textContent = `${window.screen.availWidth}px`;
+      document.getElementById('avail-height').textContent = `${window.screen.availHeight}px`;
+      document.getElementById('color-depth').textContent = `${window.screen.colorDepth}-bit`;
+      document.getElementById('pixel-ratio').textContent = `${window.devicePixelRatio}x`;
+      
+      // Show modal
+      document.getElementById('deviceModal').style.display = 'flex';
+    }
+
+    function closeDeviceModal() {
+      document.getElementById('deviceModal').style.display = 'none';
+    }
+
+    // Close device modal on overlay click
+    document.getElementById('deviceModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('deviceModal')) {
+        closeDeviceModal();
+      }
+    });
+
+    // Keyboard navigation for device modal
+    document.addEventListener('keydown', (e) => {
+      if (document.getElementById('deviceModal').style.display === 'flex') {
+        if (e.key === 'Escape') {
+          closeDeviceModal();
+        }
       }
     });
 
