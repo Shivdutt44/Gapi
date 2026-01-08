@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzaSyDq3eLU5UMm5kKZNvwyofR0bC3rMToQ-hw';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 // Middleware
 app.use(cors());
@@ -98,6 +101,34 @@ app.get('/api/places', async (req, res) => {
   } catch (error) {
     console.error('Error calling Google Places API:', error);
     res.status(500).json({ error: 'Failed to fetch places data' });
+  }
+});
+
+// Google Places Details API endpoint
+app.get('/api/place-details', async (req, res) => {
+  try {
+    const { place_id } = req.query;
+    const apiKey = GOOGLE_API_KEY;
+    
+    if (!apiKey || apiKey === 'YOUR_API_KEY') {
+      return res.status(400).json({ 
+        error: 'Google API key is required. Set GOOGLE_API_KEY env variable' 
+      });
+    }
+    
+    if (!place_id) {
+      return res.status(400).json({ error: 'Place ID is required' });
+    }
+    
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,geometry,rating,user_ratings_total,reviews,photos,types,opening_hours,business_status,price_level,url&key=${apiKey}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    res.json(data);
+  } catch (error) {
+    console.error('Error calling Google Places Details API:', error);
+    res.status(500).json({ error: 'Failed to fetch place details' });
   }
 });
 
